@@ -1,0 +1,25 @@
+[project]
+name = "click-to-mcp"
+version = "0.1.0"
+description = "Expose Python Click CLIs as Model Context Protocol servers."
+readme = "README.md"
+authors = [
+    { name = "Codex", email = "codex@openai.com" }
+]
+requires-python = ">=3.12"
+dependencies = [
+    "click>=8.3.0",
+    "fastmcp>=2.12.3",
+]
+
+[project.scripts]
+click-to-mcp = "click_to_mcp.cli:main"
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[dependency-groups]
+dev = [
+    "pytest>=8.4.2",
+]
