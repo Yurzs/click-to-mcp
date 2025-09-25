@@ -20,6 +20,8 @@ uvx click-to-mcp tests.sample_cli:cli --transport stdio
 
 The argument `tests.sample_cli:cli` follows the standard `module:object` pattern. You can point at any importable module or Python file that exposes a Click command (group or standalone). When omitted, the loader attempts to resolve a `cli` attribute or auto-discovers a single Click command in the module.
 
+When invoked via `uvx`, the wrapper automatically installs the target CLI if it is not already available in the environment by calling `uv pip install <module>`. This keeps the workflow zero-touch for end users.
+
 ### Listing available tools
 
 ```bash

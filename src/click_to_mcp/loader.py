@@ -19,6 +19,18 @@ class ClickToMcpError(RuntimeError):
     """Base error raised by the Click-to-MCP adapter."""
 
 
+class MissingDependencyError(ClickToMcpError):
+    """Raised when the referenced Click module is not installed."""
+
+    def __init__(self, requirement: str, reference: str):
+        msg = (
+            f"Missing dependency '{requirement}' required to import '{reference}'."
+        )
+        super().__init__(msg)
+        self.requirement = requirement
+        self.reference = reference
+
+
 @dataclass(slots=True)
 class LoadedCommand:
     """Represents a loaded Click command along with its origin metadata."""
@@ -67,7 +79,9 @@ def _load_module(module_ref: str) -> ModuleType:
         fallback_path = Path(*module_ref.split(".")).with_suffix(".py")
         if fallback_path.exists():
             return _load_module(str(fallback_path))
-        raise ClickToMcpError(f"Unable to import module '{module_ref}'.") from exc
+
+        missing_root = (exc.name or module_ref).split(".")[0]
+        raise MissingDependencyError(missing_root, module_ref) from exc
 
 
 def _resolve_attribute(module: ModuleType, attribute_path: str | None) -> object:

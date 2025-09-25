@@ -2,12 +2,18 @@
 
 from __future__ import annotations
 
+import shutil
+import subprocess
 from typing import Optional
 
 import anyio
 import click
 
-from .loader import ClickToMcpError, load_click_command
+from .loader import (
+    ClickToMcpError,
+    MissingDependencyError,
+    load_click_command,
+)
 from .server import create_server
 
 DEFAULT_HOST = "127.0.0.1"
@@ -62,6 +68,18 @@ def main(
 
     try:
         loaded = load_click_command(reference)
+    except MissingDependencyError as exc:
+        _attempt_install(exc.requirement)
+        try:
+            loaded = load_click_command(reference)
+        except MissingDependencyError as second_exc:
+            msg = (
+                f"Dependency '{second_exc.requirement}' is still missing after an "
+                "installation attempt."
+            )
+            raise click.ClickException(msg) from second_exc
+        except ClickToMcpError as exc:
+            raise click.ClickException(str(exc)) from exc
     except ClickToMcpError as exc:
         raise click.ClickException(str(exc)) from exc
 
@@ -85,6 +103,29 @@ def main(
         server.run(transport="sse", host=host, port=port)
     else:  # pragma: no cover - protected by click.Choice
         raise click.ClickException(f"Unsupported transport '{transport}'.")
+
+
+def _attempt_install(requirement: str) -> None:
+    """Try to install *requirement* using ``uv``."""
+
+    uv_executable = shutil.which("uv")
+    if uv_executable is None:
+        msg = (
+            "Unable to locate the 'uv' executable needed to install missing "
+            f"dependency '{requirement}'. Install it manually and re-run the command."
+        )
+        raise click.ClickException(msg)
+
+    click.echo(
+        f"Installing missing dependency '{requirement}' via uv...", err=True
+    )
+
+    try:
+        subprocess.run([uv_executable, "pip", "install", requirement], check=True)
+    except subprocess.CalledProcessError as exc:
+        raise click.ClickException(
+            f"Failed to install dependency '{requirement}' using uv."
+        ) from exc
 
 
 __all__ = ["main"]
